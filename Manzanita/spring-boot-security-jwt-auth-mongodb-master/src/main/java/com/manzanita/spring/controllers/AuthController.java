@@ -2,12 +2,14 @@ package com.manzanita.spring.controllers;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,7 +17,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -127,5 +132,41 @@ public class AuthController {
 		//return register success message
 		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
 	}
+	
+	//method used to retrieve logged in personal profile information
+	@GetMapping("/getPersonalInfo/{id}")
+	public ResponseEntity<?> getPersonalInfo(@PathVariable("id")String id) {
+		try{
+			//create a variable to store the user retrieved matching id passed
+			Optional<User> getUser = userRepository.findById(id);
 
+			//if the user is empty then return no content was found status
+			if(getUser.equals(null)) {
+				return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+			}			
+			
+			return new ResponseEntity<>(getUser, HttpStatus.OK);
+		}catch (Exception e) { //if exception caught then return null with HTTP error status
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}		
+	}
+	
+	//method that edits personal profile information
+	@PutMapping("/editPersonalInfo/{id}")
+	public ResponseEntity<User> editPersonalInfo(@PathVariable("id")String id, @RequestBody User updatedUser) {
+		Optional<User> userData = userRepository.findById(id);
+		//if profile was found update that profile information with the new information passed
+		if (userData.isPresent()) {
+			User updatedUserData = userData.get();
+			updatedUserData.setUsername(updatedUser.getUsername());
+			updatedUserData.setEmail(updatedUser.getEmail());
+			updatedUserData.setPhoneNumber(updatedUser.getPhoneNumber());
+			updatedUserData.setUnitNumber(updatedUser.getPhoneNumber());
+			updatedUserData.setRole(updatedUser.getRole());
+			return new ResponseEntity<>(userRepository.save(updatedUserData), HttpStatus.OK);
+		}else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
 }

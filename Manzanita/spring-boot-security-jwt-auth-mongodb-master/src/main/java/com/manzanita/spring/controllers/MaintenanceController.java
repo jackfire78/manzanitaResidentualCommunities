@@ -20,7 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
- 
+
+import com.manzanita.spring.models.LifeMovies;
 import com.manzanita.spring.models.WorkOrders;
 import com.manzanita.spring.repository.MaintenanceRepository;
 
@@ -70,6 +71,24 @@ public class MaintenanceController {
 			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
+	}
+	
+	//method used to retrieve a single work order
+	@GetMapping("/getWorkOrder/{id}")
+	public ResponseEntity<?> getWorkOrder(@PathVariable("id")String id) {
+		try{
+			//create a variable to store the work order retrieved matching id passed
+			Optional<WorkOrders> getWorkOrder = maintenanceRepo.findById(id);
+
+			//if the work order is empty then return no content was found status
+			if(getWorkOrder.equals(null)) {
+				return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+			}			
+			
+			return new ResponseEntity<>(getWorkOrder, HttpStatus.OK);
+		}catch (Exception e) { //if exception caught then return null with HTTP error status
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}	
 	}
 	
 	//method used to retrieve all work orders or current logged in user

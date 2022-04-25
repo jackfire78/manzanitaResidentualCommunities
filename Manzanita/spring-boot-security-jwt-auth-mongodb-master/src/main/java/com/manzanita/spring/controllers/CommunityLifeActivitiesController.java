@@ -18,8 +18,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.manzanita.spring.models.Events;
+import com.manzanita.spring.models.EventsAttended;
 import com.manzanita.spring.models.LifeActivities;
-import com.manzanita.spring.repository.LifeActivitiesRepository;
+import com.manzanita.spring.models.LifeActivitiesAttended;
+import com.manzanita.spring.models.User;
+import com.manzanita.spring.repository.ActivityAttendees;
+import com.manzanita.spring.repository.CommunityLifeActivitesRepository;
+import com.manzanita.spring.repository.EventAttendees;
+import com.manzanita.spring.repository.UserRepository;
 
 //testing controller used to display correct message depending on what is being accessed.
 //all can be accessed by anyone while other 3 require one correct role
@@ -29,11 +36,15 @@ import com.manzanita.spring.repository.LifeActivitiesRepository;
 public class CommunityLifeActivitiesController {
 
 	@Autowired
-	LifeActivitiesRepository lifeActivitiesRepo;
+	CommunityLifeActivitesRepository lifeActivitiesRepo;
+	@Autowired
+	ActivityAttendees activityAttendees;
+	@Autowired
+	UserRepository userRepo;
 	
 	//method to create a new community life activity from parameters passed.
 	@PostMapping("/createLifeActivity")
-	public ResponseEntity<LifeActivities> createCommunityEvent(@RequestBody LifeActivities lifeActivity){
+	public ResponseEntity<LifeActivities> createCommunityLifeActivity(@RequestBody LifeActivities lifeActivity){
 		try{
 			//save the new community life activity along with all given information to database
 			LifeActivities newLifeActivity = lifeActivitiesRepo.save(new LifeActivities(
@@ -86,6 +97,45 @@ public class CommunityLifeActivitiesController {
 		}
 		
 	}
+	
+	//method for attending a Community life activity
+	@PutMapping("/attendCommunityLifeActivity/{id}")
+	public ResponseEntity<LifeActivities> attendCommunityLifeActivity(@PathVariable("id")String id, @RequestBody User user) {
+//		System.out.println(id);
+//		System.out.println(user.getId());
+
+		Optional<LifeActivities> communityLifeActivityData = lifeActivitiesRepo.findById(id);
+		//Optional<User> userData = userRepo.findById(user.getId());
+
+		//if user not null, create new object and save it to attendee database
+		if (user.getId() != null) {
+			LifeActivitiesAttended attendedActivity = new LifeActivitiesAttended(id, user.getId(), communityLifeActivityData.get().getActivityName() );
+			System.out.println(attendedActivity.getActivityName());
+			activityAttendees.save(attendedActivity);
+			return new ResponseEntity<>( HttpStatus.OK);
+		}else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	//method used to retrieve all life activities the current user is attending
+	@GetMapping("/myCommunityLifeActivities/{id}")
+	public ResponseEntity<List<LifeActivities>> myCommunityLifeActivities(@PathVariable("id")String id) {
+		try{
+			//create a List variable to store all community life activities retrieved
+			List<LifeActivities> communityLifeActivityList = new ArrayList<LifeActivities>();
+			
+			activityAttendees.findByuserId(id).forEach(communityLifeActivityList::add);
+			
+		    if (communityLifeActivityList.isEmpty()) {
+		        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		    }
+			
+			return new ResponseEntity<>(communityLifeActivityList, HttpStatus.OK);
+		}catch (Exception e) { //if exception caught then return null with HTTP error status
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
 
 	//method that edits a community life activity
 	@PutMapping("/editComLifeActivity/{id}")
@@ -102,6 +152,18 @@ public class CommunityLifeActivitiesController {
 			return new ResponseEntity<>(lifeActivitiesRepo.save(updatedComLifeActivity), HttpStatus.OK);
 		}else {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	//method that deletes a Community life activity previously attended
+	@DeleteMapping("/leaveCommunityLifeActivity/{id}")
+	public ResponseEntity<HttpStatus> leaveCommunityLifeActivity(@PathVariable("id") String id) {
+		try {
+			//delete the attended activity that matches given id
+			activityAttendees.deleteById(id);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	

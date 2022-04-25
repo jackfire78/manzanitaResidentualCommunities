@@ -18,10 +18,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.manzanita.spring.models.LifeActivities;
+import com.manzanita.spring.models.Events;
+import com.manzanita.spring.models.EventsAttended;
+import com.manzanita.spring.models.JoinedLifeClubs;
 import com.manzanita.spring.models.LifeClubs;
-import com.manzanita.spring.repository.LifeActivitiesRepository;
-import com.manzanita.spring.repository.LifeClubsRepository;
+import com.manzanita.spring.models.User;
+import com.manzanita.spring.repository.ClubMembers;
+import com.manzanita.spring.repository.CommunityLifeClubsRepository;
+import com.manzanita.spring.repository.EventAttendees;
+import com.manzanita.spring.repository.UserRepository;
 
 //testing controller used to display correct message depending on what is being accessed.
 //all can be accessed by anyone while other 3 require one correct role
@@ -31,15 +36,20 @@ import com.manzanita.spring.repository.LifeClubsRepository;
 public class CommunityLifeClubsController {
 
 	@Autowired
-	LifeClubsRepository lifeClubsRepo;
+	CommunityLifeClubsRepository lifeClubsRepo;
+	@Autowired
+	ClubMembers clubMembers;
+	@Autowired
+	UserRepository userRepo;
 	
 	//method to create a new community life club from parameters passed.
 	@PostMapping("/createLifeClub")
-	public ResponseEntity<LifeClubs> createCommunityEvent(@RequestBody LifeClubs lifeClub){
+	public ResponseEntity<LifeClubs> createCommunityLifeClub(@RequestBody LifeClubs lifeClub){
 		try{
 			//save the new community life club along with all given information to database
 			LifeClubs newLifeClub = lifeClubsRepo.save(new LifeClubs(
-					lifeClub.getClubName(),lifeClub.getClubDescription()));
+					lifeClub.getClubName(),
+					lifeClub.getClubDescription()));
 			return new ResponseEntity<>(newLifeClub, HttpStatus.CREATED);
 		}catch (Exception e) { //if exception caught then return null with HTTP error status
 			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -87,6 +97,46 @@ public class CommunityLifeClubsController {
 		}
 		
 	}
+	
+	//method for joining a Community life club
+	@PutMapping("/joinCommunityLifeClub/{id}")
+	public ResponseEntity<LifeClubs> joinCommunityLifeClub(@PathVariable("id")String id, @RequestBody User user) {
+//		System.out.println(id);
+//		System.out.println(user.getId());
+
+		Optional<LifeClubs> communityLifeClubData = lifeClubsRepo.findById(id);
+		//Optional<User> userData = userRepo.findById(user.getId());
+
+		//if user not null, create new object and save it to club members database
+		if (user.getId() != null) {
+			JoinedLifeClubs joinedClub = new JoinedLifeClubs(id, user.getId(), communityLifeClubData.get().getClubName() );
+			System.out.println(joinedClub.toString());
+			clubMembers.save(joinedClub);
+			return new ResponseEntity<>( HttpStatus.OK);
+		}else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	//method used to retrieve all Community life clubs the current user is attending
+	@GetMapping("/getMyComLifeClub/{id}")
+	public ResponseEntity<List<LifeClubs>> myCommunityLifeClub(@PathVariable("id")String id) {
+		try{
+			//create a List variable to store all community life clubs retrieved
+			List<LifeClubs> communityLifeClubsList = new ArrayList<LifeClubs>();
+			
+			clubMembers.findByuserId(id).forEach(communityLifeClubsList::add);
+			
+		    if (communityLifeClubsList.isEmpty()) {
+		        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		    }
+			
+			return new ResponseEntity<>(communityLifeClubsList, HttpStatus.OK);
+		}catch (Exception e) { //if exception caught then return null with HTTP error status
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+	}
 
 	//method that edits a community life club
 	@PutMapping("/editComLifeClub/{id}")
@@ -101,6 +151,19 @@ public class CommunityLifeClubsController {
 			return new ResponseEntity<>(lifeClubsRepo.save(updatedComLifeClub), HttpStatus.OK);
 		}else {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	
+	//method that deletes a Community life club previously attended
+	@DeleteMapping("/leaveCommunityLifeClub/{id}")
+	public ResponseEntity<HttpStatus> leaveCommunityLifeClub(@PathVariable("id") String id) {
+		try {
+			//delete the joined club that matches given id
+			clubMembers.deleteById(id);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	

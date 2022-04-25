@@ -50,9 +50,10 @@ public class User {
 
   public User() {
   }
+  
 
-  public User(String username, String password, String email, String phoneNumber, String unitNumber, String role) {
-    this.username = username;
+  public User( String username, String password, String email, String phoneNumber, String unitNumber, String role) {
+	this.username = username;
     this.email = email;
     this.password = password;
     this.phoneNumber = phoneNumber;

@@ -13,7 +13,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Events {
 	@Id
 	private String id;
-
+	private String userId;
+	
 	@NotBlank
 	@Size(max = 25)
 	private String eventName;
@@ -49,12 +50,19 @@ public class Events {
 		this.eventDate = eventDate;
 		this.eventPresenters = eventPresenters;
 	}
-
+	//custom constructor for joining events
+	public Events(String id, String userId, String eventName) {
+		this.id = id;
+		this.eventName = eventName;
+		this.userId = userId;
+	}
 
 	public String getId() {
 		return id;
 	}
-
+	public String getUserId() {
+		return userId;
+	}
 	/**
 	 * @return the eventName
 	 */

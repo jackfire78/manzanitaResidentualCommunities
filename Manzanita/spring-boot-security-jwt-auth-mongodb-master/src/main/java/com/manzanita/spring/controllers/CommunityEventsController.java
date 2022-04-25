@@ -19,7 +19,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.manzanita.spring.models.Events;
+import com.manzanita.spring.models.EventsAttended;
+import com.manzanita.spring.models.User;
 import com.manzanita.spring.repository.CommunityEventsRepository;
+import com.manzanita.spring.repository.EventAttendees;
+import com.manzanita.spring.repository.UserRepository;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -28,6 +32,10 @@ public class CommunityEventsController {
 	
 	@Autowired
 	CommunityEventsRepository communityEventsRepo;
+	@Autowired
+	EventAttendees eventAttendees;
+	@Autowired
+	UserRepository userRepo;
 	
 	//method to create a new Community Event from parameters passed.
 	@PostMapping("/createCommunityEvent")
@@ -85,6 +93,46 @@ public class CommunityEventsController {
 		}
 		
 	}
+	
+	//method for joining a Community Event
+	@PutMapping("/joinCommunityEvent/{id}")
+	public ResponseEntity<Events> joinCommunityEvent(@PathVariable("id")String id, @RequestBody User user) {
+//		System.out.println(id);
+//		System.out.println(user.getId());
+
+		Optional<Events> communityEventData = communityEventsRepo.findById(id);
+		//Optional<User> userData = userRepo.findById(user.getId());
+
+		//if user not null, create new object and save it to attendee database
+		if (user.getId() != null) {
+			EventsAttended attendedEvent = new EventsAttended(id, user.getId(), communityEventData.get().getEventName() );
+			System.out.println(attendedEvent.toString());
+			eventAttendees.save(attendedEvent);
+			return new ResponseEntity<>( HttpStatus.OK);
+		}else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	//method used to retrieve all Community Events the current user is attending
+	@GetMapping("/myCommunityEvents/{id}")
+	public ResponseEntity<List<Events>> myCommunityEvents(@PathVariable("id")String id) {
+		try{
+			//create a List variable to store all community events retrieved
+			List<Events> communityEventList = new ArrayList<Events>();
+			
+			eventAttendees.findByuserId(id).forEach(communityEventList::add);
+			
+		    if (communityEventList.isEmpty()) {
+		        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		    }
+			
+			return new ResponseEntity<>(communityEventList, HttpStatus.OK);
+		}catch (Exception e) { //if exception caught then return null with HTTP error status
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+	}
 
 	//method that edits a Community Event
 	@PutMapping("/editCommunityEvent/{id}")
@@ -103,6 +151,18 @@ public class CommunityEventsController {
 			return new ResponseEntity<>(communityEventsRepo.save(updatedCommunityEvent), HttpStatus.OK);
 		}else {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	//method that deletes a Community Event previously attended
+	@DeleteMapping("/leaveCommunityEvent/{id}")
+	public ResponseEntity<HttpStatus> leaveCommunityEvent(@PathVariable("id") String id) {
+		try {
+			//delete the attended event that matches given id
+			eventAttendees.deleteById(id);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	

@@ -1,0 +1,9 @@
+com.manzanita.spring
+com.manzanita.spring.controllers
+com.manzanita.spring.models
+com.manzanita.spring.repository
+com.manzanita.spring.request
+com.manzanita.spring.response
+com.manzanita.spring.security
+com.manzanita.spring.security.jwt
+com.manzanita.spring.services
